@@ -102,73 +102,97 @@ def compute_transition(all_tags):
     return transition
 
 
-def viterbi_algorithm(sent, tags, emission, transition, known_words):
+def calc_q(u, v, x_k, transition, emission):
+    return transition.get((u, v), 0) * emission.get((x_k, v))
+
+
+def viterbi_algorithm(sent, tags, emission, transition):
     # dp table for words * tags (including unknown tags)
-    dp = [[[0, None] for i in range(len(tags))] for i in range(len(sent))]
+    K, N = len(tags), len(sent)
+
+    dp = [{v: [0, None] for v in tags} for i in range(N + 1)]
 
     # init base layer
-    for k in range(len(tags)):
-        t = transition.get((tag_start, tags[k]), 1)
-        e = emission.get((sent[0], tags[k]))
-        dp[0][k][0] = t * e
+    dp[0][tag_start] = [1, None]
 
     # algorithm
-    for i in range(1, len(sent)):
-        for tag in range(len(tags)):
-            # [probability, back pointer]
-            e = emission.get((sent[i], tags[tag]), 0)
-            for prev_tag in range(len(tags)):
-                t = transition.get((tags[prev_tag], tags[tag]), 1)
-                val = dp[i - 1][prev_tag][0] * t * e
-                if val > dp[i][tag][0]:
-                    dp[i][tag][0] = val
-                    dp[i][tag][1] = prev_tag
-    output = []
-    last_tag_idx, max_val, max_tag = 0, 0, 0
-    for i, x in enumerate(dp[-1]):
-        if x[0] > max_val:
-            last_tag_idx, max_val, max_tag = x[1], x[0], i
-    output.append(tags[max_tag])
+    for k in range(1, N + 1):
+        for v in tags:
+            max_u = max(list(dp[k-1].keys()), key=lambda u: dp[k-1][u][0] * calc_q(u, v, sent[k-1], transition, emission))
+            dp_k_v = dp[k-1][max_u][0] * calc_q(max_u, v, sent[k-1], transition, emission)
+            if dp_k_v > 0:
+                dp[k][v][0] = dp_k_v
+                dp[k][v][1] = max_u
+            else:
+                dp[k][v][1] = max(list(dp[k-1].keys()),  key=lambda u: dp[k-1][u][0] * transition.get((u, v), 0))
 
-    if len(sent) == 1:
-        return output
+    output = [None for i in range(N)]
+    output[N-1] = max(tags, key=lambda u: dp[N][u][0] * transition.get((u, tag_stop), 0))
 
-    for i in range(len(sent) - 2, 0, -1):
-        output.append(tags[last_tag_idx])
-        last_tag_idx = dp[i][last_tag_idx][1]
-    output.append(tags[last_tag_idx])
+    for k in range(max(N - 2, -1), -1, -1):
+        output[k] = dp[k + 2][output[k+1]][1]
 
-    return output[::-1]
+    return output
 
 
 def question_c(X_train, y_train, X_test, y_test,
-               words_train, tags_train, words_test, tags_test, known_words):
+               words_train, tags_train, words_test, tags_test, known_words, unknown_words):
     # part i: emission
     emission = compute_emission(words_train, words_test, tags_train, known_words)
 
+    all_tags = list(set(tags_train))
     # part i: transition
     transition = compute_transition(y_train)
 
     # part iii
-    sents_tagged_correctly = 0
+    sents_known_tagged_correctly = 0
+    sents_unknown_tagged_correctly = 0
+
     for sample, tags in zip(X_test, y_test):
-        output = viterbi_algorithm(sample, list(set(tags_train)), emission, transition, known_words)
-        if output == tags:
-            sents_tagged_correctly += 1
-    return 1 - (sents_tagged_correctly / len(X_test))
+        output = viterbi_algorithm(sample, all_tags, emission, transition)
+        for i, w in enumerate(sample):
+            if w in known_words:
+                if output[i] == tags[i]:
+                    sents_known_tagged_correctly += 1
+            else:
+                if output[i] == tags[i]:
+                    sents_unknown_tagged_correctly += 1
+    return 1 - (sents_known_tagged_correctly / len(known_words)), 1 - (
+            sents_unknown_tagged_correctly / len(unknown_words)), \
+           1 - ((sents_known_tagged_correctly + sents_unknown_tagged_correctly) / len(words_test))
 
 
 def question_d(X_train, y_train, X_test, y_test,
                words_train, tags_train, words_test, tags_test, known_words):
-    emission = compute_emission(words_train, words_test, tags_train, True)
+    emission = compute_emission(words_train, words_test, tags_train, known_words, True)
     transition = compute_transition(y_train)
-    sents_tagged_correctly = 0
-    for sample, tags in zip(X_test, y_test):
-        output = viterbi_algorithm(sample, list(set(tags_train)), emission, transition, known_words)
-        if output == tags:
-            sents_tagged_correctly += 1
-    return 1 - (sents_tagged_correctly / len(X_test))
 
+    all_tags = list(set(tags_train))
+
+    sents_known_tagged_correctly = 0
+    sents_unknown_tagged_correctly = 0
+
+    for sample, tags in zip(X_test, y_test):
+        output = viterbi_algorithm(sample, all_tags, emission, transition)
+        for i, w in enumerate(sample):
+            if w in known_words:
+                if output[i] == tags[i]:
+                    sents_known_tagged_correctly += 1
+            else:
+                if output[i] == tags[i]:
+                    sents_unknown_tagged_correctly += 1
+    return 1 - (sents_known_tagged_correctly / len(known_words)), 1 - (
+            sents_unknown_tagged_correctly / len(unknown_words)), \
+           1 - ((sents_known_tagged_correctly + sents_unknown_tagged_correctly) / len(words_test))
+
+
+def get_pseudoword(word):
+    if re.match("[1-9][1-9]", word):
+        return 'TWO_DIGIT'
+    elif re.match("[1-9][1-9][1-9][1-9]", word):
+        return 'FOUR_DIGIT'
+    elif re.match("[0-9]{2}-[0-9]{2}-?[0-9]", word):
+        pass
 
 def question_e(words_train, tags_train, words_test, tags_test):
     # Part i
@@ -210,14 +234,14 @@ if __name__ == '__main__':
 
     unknown_words, unknown_words_tags, known_words, known_words_tags = know_and_unknown_test(words_test, tags_test)
 
-    # error_rate_c = question_c(X_train, y_train, X_test, y_test,
-    #                           words_train, tags_train, words_test, tags_test, known_words)
-    # Result Qc
-    # print(error_rate_c)
+    # error_rate_known, error_rate_unknown, error_rate_total = question_c(X_train, y_train, X_test, y_test,
+    #                           words_train, tags_train, words_test, tags_test, known_words, unknown_words)
+    # # Result Qc
+    # print(error_rate_known, error_rate_unknown, error_rate_total)
 
-    # error_rate_d = question_d(X_train, y_train, X_test, y_test,
-    #                           words_train, tags_train, words_test, tags_test, known_words)
+    error_rate_known, error_rate_unknown, error_rate_total = question_d(X_train, y_train, X_test, y_test,
+                              words_train, tags_train, words_test, tags_test, known_words)
     # Result Qd
-    # print(error_rate_d)
+    print(error_rate_known, error_rate_unknown, error_rate_total)
 
-    pseudo_words = question_e(words_train, tags_train, words_test, tags_test)
+    # pseudo_words = question_e(words_train, tags_train, words_test, tags_test)
