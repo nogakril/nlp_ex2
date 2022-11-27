@@ -72,7 +72,8 @@ def compute_emission(words_train, words_test, tags_train, known_words, add_one=F
     for w in words_test:
         for t in tags:
             if add_one:
-                emission[(w, t)] = (cache[t].get(w, 0) + 1) / (sum(cache[t].values()) + len(set(words_test + words_train)))
+                emission[(w, t)] = (cache[t].get(w, 0) + 1) / (
+                            sum(cache[t].values()) + len(set(words_test + words_train)))
             else:
                 if w not in known_words and t == 'NN':
                     emission[(w, t)] = 1
@@ -118,19 +119,20 @@ def viterbi_algorithm(sent, tags, emission, transition):
     # algorithm
     for k in range(1, N + 1):
         for v in tags:
-            max_u = max(list(dp[k-1].keys()), key=lambda u: dp[k-1][u][0] * calc_q(u, v, sent[k-1], transition, emission))
-            dp_k_v = dp[k-1][max_u][0] * calc_q(max_u, v, sent[k-1], transition, emission)
+            max_u = max(list(dp[k - 1].keys()),
+                        key=lambda u: dp[k - 1][u][0] * calc_q(u, v, sent[k - 1], transition, emission))
+            dp_k_v = dp[k - 1][max_u][0] * calc_q(max_u, v, sent[k - 1], transition, emission)
             if dp_k_v > 0:
                 dp[k][v][0] = dp_k_v
                 dp[k][v][1] = max_u
             else:
-                dp[k][v][1] = max(list(dp[k-1].keys()),  key=lambda u: dp[k-1][u][0] * transition.get((u, v), 0))
+                dp[k][v][1] = max(list(dp[k - 1].keys()), key=lambda u: dp[k - 1][u][0] * transition.get((u, v), 0))
 
     output = [None for i in range(N)]
-    output[N-1] = max(tags, key=lambda u: dp[N][u][0] * transition.get((u, tag_stop), 0))
+    output[N - 1] = max(tags, key=lambda u: dp[N][u][0] * transition.get((u, tag_stop), 0))
 
     for k in range(max(N - 2, -1), -1, -1):
-        output[k] = dp[k + 2][output[k+1]][1]
+        output[k] = dp[k + 2][output[k + 1]][1]
 
     return output
 
@@ -187,12 +189,22 @@ def question_d(X_train, y_train, X_test, y_test,
 
 
 def get_pseudoword(word):
-    if re.match("[1-9][1-9]", word):
-        return 'TWO_DIGIT'
-    elif re.match("[1-9][1-9][1-9][1-9]", word):
-        return 'FOUR_DIGIT'
-    elif re.match("[0-9]{2}-[0-9]{2}-?[0-9]", word):
-        pass
+    if re.match("(\d*\.?\d+|\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?!\S)", word):
+        return 'NUMBER'
+    elif len(word) >= 3 and word[0].isUpper() and word[-2] == '\'' and word[-1].isLower():
+        return 'NAME_WITH_POSSESSION_S'
+    elif re.match("\$(\d*\.?\d+|\d{1,3}(?:,\d{3})*(?:\.\d+)?)(?!\S)", word):
+        return 'SUM_OF_MONEY'
+    elif word[0].isUpper():
+        return 'initCap'
+    elif len(word) >= 2 and word[-2:] == "ed":
+        return 'ed_SUFFIX'
+    elif len(word) >= 2 and word[-2:] == "ly":
+        return 'ly_SUFFIX'
+    elif len(word) >= 3 and word[-3:] == "ing":
+        return 'ing_SUFFIX'
+    elif len(word) >= 3 and word[-3:] == "est":
+        return 'est_SUFFIX'
 
 def question_e(words_train, tags_train, words_test, tags_test):
     # Part i
@@ -228,9 +240,9 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test = load_data()
     words_train, tags_train, words_test, tags_test = get_all_words_and_tags(X_train, y_train, X_test, y_test)
 
-    error_rate_known, error_rate_unknown, error_rate_total = question_b(words_train, tags_train, words_test, tags_test)
+    # error_rate_known, error_rate_unknown, error_rate_total = question_b(words_train, tags_train, words_test, tags_test)
     # Result Qb
-    print(error_rate_known, error_rate_unknown, error_rate_total)
+    # print(error_rate_known, error_rate_unknown, error_rate_total)
 
     unknown_words, unknown_words_tags, known_words, known_words_tags = know_and_unknown_test(words_test, tags_test)
 
@@ -239,9 +251,11 @@ if __name__ == '__main__':
     # # Result Qc
     # print(error_rate_known, error_rate_unknown, error_rate_total)
 
-    error_rate_known, error_rate_unknown, error_rate_total = question_d(X_train, y_train, X_test, y_test,
-                              words_train, tags_train, words_test, tags_test, known_words)
+    # error_rate_known, error_rate_unknown, error_rate_total = question_d(X_train, y_train, X_test, y_test,
+    #                           words_train, tags_train, words_test, tags_test, known_words)
     # Result Qd
-    print(error_rate_known, error_rate_unknown, error_rate_total)
+    # print(error_rate_known, error_rate_unknown, error_rate_total)
 
-    # pseudo_words = question_e(words_train, tags_train, words_test, tags_test)
+    pseudo_words = question_e(words_train, tags_train, words_test, tags_test)
+    for w in set(pseudo_words):
+        print(w)
