@@ -73,7 +73,7 @@ def compute_emission(words_train, words_test, tags_train, known_words, add_one=F
         for t in tags:
             if add_one:
                 emission[(w, t)] = (cache[t].get(w, 0) + 1) / (
-                            sum(cache[t].values()) + len(set(words_test + words_train)))
+                        sum(cache[t].values()) + len(set(words_test + words_train)))
             else:
                 if w not in known_words and t == 'NN':
                     emission[(w, t)] = 1
@@ -171,7 +171,7 @@ def question_c(X_train, y_train, X_test, y_test,
 
 
 def question_d(X_train, y_train, X_test, y_test,
-               words_train, tags_train, words_test, tags_test, known_words):
+               words_train, tags_train, words_test, tags_test, known_words, unknown_words):
     return compute_error_rate(X_train, y_train, words_train, tags_train, words_test,
                               tags_test, X_test, y_test, known_words, unknown_words, True)
 
@@ -186,7 +186,7 @@ def get_pseudoword(word):
 
 
 def question_e(X_train, y_train, X_test, y_test,
-               words_train, tags_train, words_test, tags_test, known_words):
+               words_train, tags_train, words_test, tags_test, known_words, unknown_words):
     # Part i
     freq = {}
     for w in words_train:
@@ -195,11 +195,13 @@ def question_e(X_train, y_train, X_test, y_test,
         if freq[word] < 5:
             words_train[i] = get_pseudoword(word)
     for i, word in enumerate(words_test):
+        if freq[word] < 5:
+            words_test[i] = get_pseudoword(word)
         if word in unknown_words:
             words_test[i] = get_pseudoword(word)
 
     return compute_error_rate(X_train, y_train, X_test, y_test,
-                              words_train, tags_train, words_test, tags_test, known_words)
+                              words_train, tags_train, words_test, tags_test, known_words, unknown_words)
 
 
 def know_and_unknown_test(words_test, tags_test):
