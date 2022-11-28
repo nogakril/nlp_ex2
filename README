@@ -1,0 +1,70 @@
+Answers to question practical part:
+
+(b)
+ii.
+=========================================
+Qb - Known words error rate: 0.0704399684933048
+Qb - Unknown words error rate: 0.75043630017452
+Qb - All words error rate: 0.14811123293132666
+=========================================
+
+(c)
+ii.
+
+In the implemetion of the viterbi algorithm we needed to choose
+which tag to use as a back-pointer in case where there is no triplet, that its product > 0, of the following:
+ - cell in the previous iteration
+ - transition probability
+ - emission probability
+In this case we chose the back-pointer to be the tag from the previous iteration the maximize the product of its cell
+and the transition probability to the current tag.
+
+iii.
+
+=========================================
+Qc - Known words error rate: 0.1469562281984922
+Qc - Unknown words error rate: 0.7722513089005236
+Qc - All words error rate: 0.21837934815110138
+=========================================
+
+As we can see, compared to the previous question we get less good results, we assume that's cause by the nature
+of the viterbi algorithm, that once we rich a point in the sentence we it's probability is 0, we no longer predict
+the tags according to any logic probability.
+
+(d)
+ii.
+
+=========================================
+Qd - Known words error rate: 0.14616856081917406
+Qd - Unknown words error rate: 0.7198952879581152
+Qd - All words error rate: 0.21170138542808736
+=========================================
+
+As we can see the Add-one smoothing did improve the error rate a little as expected.
+but still not as good as the maximum likelihood estimation.
+
+(e)
+ii.
+
+=========================================
+Qe_ii - Known words error rate: 0.18778032492773844
+Qe_ii - Unknown words error rate: 0.0
+Qe_ii - All words error rate: 0.18778032492773844
+=========================================
+As we can see the pseudo-words reduce the unknown words completely such that not the known words is equal
+to the total words, which results a bif improvement compared to c and d,
+but still not as good as the maximum likelihood estimation.
+
+iii.
+
+=========================================
+Qe_iii - Known words error rate: 0.16894248978371373
+Qe_iii - Unknown words error rate: 0.0
+Qe_iii - All words error rate: 0.16894248978371373
+=========================================
+As we can see the pseudo-words with the Add-one smoothing results even a better improvement compared to c d and e_ii,
+but still not as good as the maximum likelihood estimation.
+
+Looking at the most frequent mistakes we see that usually the tags looks similar, NNS with NN$, VBD with VBN, etc.
+We assume that the similarity at tag name implicates similarity at meaning, therefore it make sense that we'll make
+more mistakes between similar tags.
